@@ -17,31 +17,39 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SimpleJDBCRepository {
-
   private Connection connection = null;
   private PreparedStatement ps = null;
   private Statement st = null;
 
   private static final String createUserSQL = "INSERT INTO myusers (firstname, lastname, age) VALUES (?, ?, ?) RETURNING id";
   private static final String updateUserSQL = "UPDATE myusers SET firstname = ?, lastname = ?, age = ? WHERE id = ?";
-  private static final String deleteUser = "DELETE FROM myusers WHERE id =?";
+  private static final String deleteUser = "DELETE FROM myusers WHERE id = ?";
   private static final String findUserByIdSQL = "SELECT * FROM myusers WHERE id = ?";
   private static final String findUserByNameSQL = "SELECT * FROM myusers WHERE firstname = ?";
   private static final String findAllUserSQL = "SELECT * FROM myusers";
 
-  public Long createUser() {
+  // Create user and return generated id
+  public Long createUser(User user) {
     Long id = null;
     try (Connection conn = CustomDataSource.getInstance().getConnection();
-        PreparedStatement ps = conn.prepareStatement(createUserSQL)) {
-      ps.setString(1, "John");
-      ps.setString(2, "Doe");
-      ps.setInt(3, 30);
-      var rs = ps.executeQuery();
-      if (rs.next()) {
-        id = rs.getLong("id");
+        PreparedStatement ps = conn.prepareStatement(createUserSQL, Statement.RETURN_GENERATED_KEYS)) {
+
+      ps.setString(1, user.getFirstName());
+      ps.setString(2, user.getLastName());
+      ps.setInt(3, user.getAge());
+
+      int affectedRows = ps.executeUpdate();
+      if (affectedRows == 0) {
+        throw new RuntimeException("Creating user failed, no rows affected.");
       }
 
-      ps.close();
+      try (ResultSet rs = ps.getGeneratedKeys()) {
+        if (rs.next()) {
+          id = rs.getLong(1);
+        } else {
+          throw new RuntimeException("Creating user failed, no ID obtained.");
+        }
+      }
     } catch (Exception e) {
       e.printStackTrace();
       return null;
@@ -49,12 +57,13 @@ public class SimpleJDBCRepository {
     return id;
   }
 
+  // Find user by Id
   public User findUserById(Long userId) {
     User user = null;
     try (Connection conn = CustomDataSource.getInstance().getConnection();
         PreparedStatement ps = conn.prepareStatement(findUserByIdSQL)) {
       ps.setLong(1, userId);
-      var rs = ps.executeQuery();
+      ResultSet rs = ps.executeQuery();
       if (rs.next()) {
         user = User.builder()
             .id(rs.getLong("id"))
@@ -68,15 +77,15 @@ public class SimpleJDBCRepository {
       e.printStackTrace();
     }
     return user;
-
   }
 
+  // Find user by first name
   public User findUserByName(String userName) {
     User user = null;
     try (Connection conn = CustomDataSource.getInstance().getConnection();
         PreparedStatement ps = conn.prepareStatement(findUserByNameSQL)) {
       ps.setString(1, userName);
-      var rs = ps.executeQuery();
+      ResultSet rs = ps.executeQuery();
       if (rs.next()) {
         user = User.builder()
             .id(rs.getLong("id"))
@@ -92,6 +101,7 @@ public class SimpleJDBCRepository {
     return user;
   }
 
+  // Find all users
   public List<User> findAllUser() {
     List<User> users = new ArrayList<>();
     try (Connection conn = CustomDataSource.getInstance().getConnection();
@@ -106,40 +116,38 @@ public class SimpleJDBCRepository {
             .build();
         users.add(user);
       }
-
     } catch (Exception e) {
       e.printStackTrace();
     }
     return users;
-
   }
 
-  public User updateUser() {
+  // Update user and return updated user, or null if failed
+  public User updateUser(User user) {
     try (Connection conn = CustomDataSource.getInstance().getConnection();
         PreparedStatement ps = conn.prepareStatement(updateUserSQL)) {
-      // Hardcoded update values for user with id 1
-      ps.setString(1, "Jane");
-      ps.setString(2, "Smith");
-      ps.setInt(3, 28);
-      ps.setLong(4, 1);
 
-      int updatedRows = ps.executeUpdate();
-      if (updatedRows > 0) {
-        return findUserById(1L); // return the updated user
+      ps.setString(1, user.getFirstName());
+      ps.setString(2, user.getLastName());
+      ps.setInt(3, user.getAge());
+      ps.setLong(4, user.getId());
+
+      int affectedRows = ps.executeUpdate();
+      if (affectedRows > 0) {
+        return findUserById(user.getId());
       }
     } catch (Exception e) {
       e.printStackTrace();
     }
     return null;
-
   }
 
+  // Delete user by id
   private void deleteUser(Long userId) {
     try (Connection conn = CustomDataSource.getInstance().getConnection();
         PreparedStatement ps = conn.prepareStatement(deleteUser)) {
       ps.setLong(1, userId);
       ps.executeUpdate();
-
     } catch (Exception e) {
       e.printStackTrace();
     }
