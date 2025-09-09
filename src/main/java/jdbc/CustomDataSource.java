@@ -1,33 +1,31 @@
+// CustomDataSource.java
 package jdbc;
 
 import javax.sql.DataSource;
+import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.util.Properties;
 import java.util.logging.Logger;
-import lombok.Getter;
-import lombok.Setter;
 
-@Getter
-@Setter
 public class CustomDataSource implements DataSource {
   private static volatile CustomDataSource instance;
-
   private final String driver;
   private final String url;
-  private final String name;
+  private final String user;
   private final String password;
 
-  private CustomDataSource(String driver, String url, String password, String name) {
+  private CustomDataSource(String driver, String url, String user, String password) {
     this.driver = driver;
     this.url = url;
+    this.user = user;
     this.password = password;
-    this.name = name;
-
     try {
       Class.forName(driver);
     } catch (ClassNotFoundException e) {
-      e.printStackTrace();
+      throw new RuntimeException("Driver class not found", e);
     }
   }
 
@@ -35,13 +33,20 @@ public class CustomDataSource implements DataSource {
     if (instance == null) {
       synchronized (CustomDataSource.class) {
         if (instance == null) {
-          // Hardcoded values - replace these with properties loaded from app.properties
-          // if desired
-          String driver = "org.postgresql.Driver";
-          String url = "jdbc:postgresql://localhost:5432/myfirstdb";
-          String name = "your_db_username";
-          String password = "your_db_password";
-          instance = new CustomDataSource(driver, url, password, name);
+          Properties props = new Properties();
+          try (InputStream input = CustomDataSource.class.getClassLoader().getResourceAsStream("app.properties")) {
+            if (input == null) {
+              throw new RuntimeException("app.properties not found");
+            }
+            props.load(input);
+          } catch (IOException e) {
+            throw new RuntimeException("Error loading app.properties", e);
+          }
+          String driver = props.getProperty("postgres.driver");
+          String url = props.getProperty("postgres.url");
+          String user = props.getProperty("postgres.user");
+          String password = props.getProperty("postgres.password");
+          instance = new CustomDataSource(driver, url, user, password);
         }
       }
     }
@@ -50,46 +55,47 @@ public class CustomDataSource implements DataSource {
 
   @Override
   public Connection getConnection() throws SQLException {
-    return java.sql.DriverManager.getConnection(url, name, password);
+    return new CustomConnector().getConnection(url, user, password);
   }
 
   @Override
   public Connection getConnection(String username, String password) throws SQLException {
-    return java.sql.DriverManager.getConnection(url, username, password);
+    return new CustomConnector().getConnection(url, username, password);
   }
 
-  @Override
-  public java.io.PrintWriter getLogWriter() throws SQLException {
-    throw new UnsupportedOperationException("getLogWriter not supported");
-  }
-
-  @Override
-  public void setLogWriter(java.io.PrintWriter out) throws SQLException {
-    throw new UnsupportedOperationException("setLogWriter not supported");
-  }
-
-  @Override
-  public void setLoginTimeout(int seconds) throws SQLException {
-    throw new UnsupportedOperationException("setLoginTimeout not supported");
-  }
-
-  @Override
-  public int getLoginTimeout() throws SQLException {
-    throw new UnsupportedOperationException("getLoginTimeout not supported");
-  }
-
-  @Override
-  public Logger getParentLogger() throws SQLFeatureNotSupportedException {
-    throw new SQLFeatureNotSupportedException("getParentLogger not supported");
-  }
-
+  // Other DataSource methods with default implementations
   @Override
   public <T> T unwrap(Class<T> iface) throws SQLException {
-    throw new UnsupportedOperationException("unwrap not supported");
+    throw new SQLException("Not supported");
   }
 
   @Override
   public boolean isWrapperFor(Class<?> iface) throws SQLException {
-    throw new UnsupportedOperationException("isWrapperFor not supported");
+    throw new SQLException("Not supported");
+  }
+
+  @Override
+  public java.io.PrintWriter getLogWriter() throws SQLException {
+    throw new SQLException("Not supported");
+  }
+
+  @Override
+  public void setLogWriter(java.io.PrintWriter out) throws SQLException {
+    throw new SQLException("Not supported");
+  }
+
+  @Override
+  public void setLoginTimeout(int seconds) throws SQLException {
+    throw new SQLException("Not supported");
+  }
+
+  @Override
+  public int getLoginTimeout() throws SQLException {
+    throw new SQLException("Not supported");
+  }
+
+  @Override
+  public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+    throw new SQLFeatureNotSupportedException("Not supported");
   }
 }
