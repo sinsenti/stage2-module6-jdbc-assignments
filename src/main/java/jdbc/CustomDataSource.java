@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import lombok.Getter;
 import lombok.Setter;
+import java.sql.SQLFeatureNotSupportedException;
 
 @Getter
 @Setter
@@ -77,9 +78,9 @@ public class CustomDataSource implements DataSource {
     throw new UnsupportedOperationException();
   }
 
-  @Override
-  public java.util.logging.Logger getParentLogger() throws java.util.logging.LoggingException {
-    throw new UnsupportedOperationException();
+  // @Override
+  public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+    throw new SQLFeatureNotSupportedException("Not supported.");
   }
 
   @Override
