@@ -22,11 +22,6 @@ public class CustomDataSource implements DataSource {
     this.url = url;
     this.user = user;
     this.password = password;
-    try {
-      Class.forName(driver);
-    } catch (ClassNotFoundException e) {
-      throw new RuntimeException("Driver class not found", e);
-    }
   }
 
   public static CustomDataSource getInstance() {
