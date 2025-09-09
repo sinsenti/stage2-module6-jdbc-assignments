@@ -3,14 +3,14 @@ package jdbc;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
+import java.util.logging.Logger;
 import lombok.Getter;
 import lombok.Setter;
-import java.sql.SQLFeatureNotSupportedException;
 
 @Getter
 @Setter
 public class CustomDataSource implements DataSource {
-
   private static volatile CustomDataSource instance;
 
   private final String driver;
@@ -35,12 +35,12 @@ public class CustomDataSource implements DataSource {
     if (instance == null) {
       synchronized (CustomDataSource.class) {
         if (instance == null) {
-          // Load properties from app.properties (not shown here, assume loaded)
+          // Hardcoded values - replace these with properties loaded from app.properties
+          // if desired
           String driver = "org.postgresql.Driver";
           String url = "jdbc:postgresql://localhost:5432/myfirstdb";
           String name = "your_db_username";
           String password = "your_db_password";
-
           instance = new CustomDataSource(driver, url, password, name);
         }
       }
@@ -60,36 +60,36 @@ public class CustomDataSource implements DataSource {
 
   @Override
   public java.io.PrintWriter getLogWriter() throws SQLException {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("getLogWriter not supported");
   }
 
   @Override
   public void setLogWriter(java.io.PrintWriter out) throws SQLException {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("setLogWriter not supported");
   }
 
   @Override
   public void setLoginTimeout(int seconds) throws SQLException {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("setLoginTimeout not supported");
   }
 
   @Override
   public int getLoginTimeout() throws SQLException {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("getLoginTimeout not supported");
   }
 
-  // @Override
+  @Override
   public Logger getParentLogger() throws SQLFeatureNotSupportedException {
-    throw new SQLFeatureNotSupportedException("Not supported.");
+    throw new SQLFeatureNotSupportedException("getParentLogger not supported");
   }
 
   @Override
   public <T> T unwrap(Class<T> iface) throws SQLException {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("unwrap not supported");
   }
 
   @Override
   public boolean isWrapperFor(Class<?> iface) throws SQLException {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("isWrapperFor not supported");
   }
 }
